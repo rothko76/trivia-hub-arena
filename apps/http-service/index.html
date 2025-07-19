@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Kahoot-style POC</title>
+  </head>
+  <body>
+    <h1>Kahoot-style POC</h1>
+    <div id="status">Connecting...</div>
+    <div id="question"></div>
+    <div id="options"></div>
+    <script>
+      const ws = new WebSocket("ws://localhost:6789");
+
+      ws.onopen = () => {
+        document.getElementById("status").innerText =
+          "Connected! Please wait...";
+      };
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === "waiting_room") {
+          const name = prompt("Enter your name:");
+          ws.send(name);
+          document.getElementById("status").innerText = msg.message;
+        } else if (msg.type === "question") {
+          document.getElementById("status").innerText = "Answer the question:";
+          document.getElementById("question").innerText = msg.question;
+          const optionsDiv = document.getElementById("options");
+          optionsDiv.innerHTML = "";
+          msg.options.forEach((option) => {
+            const btn = document.createElement("button");
+            btn.innerText = option;
+            btn.onclick = () => {
+              ws.send(
+                JSON.stringify({ type: "answer", answer: option.toString() })
+              );
+              document.getElementById("status").innerText =
+                "Answer submitted. Waiting for result...";
+              document.getElementById("options").innerHTML = "";
+            };
+            optionsDiv.appendChild(btn);
+          });
+        } else if (msg.type === "result") {
+          document.getElementById("status").innerText = msg.message;
+        }
+      };
+
+      ws.onclose = () => {
+        document.getElementById("status").innerText = "Connection closed.";
+      };
+    </script>
+  </body>
+</html>
